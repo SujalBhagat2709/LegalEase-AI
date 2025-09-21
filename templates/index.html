@@ -1059,134 +1059,7 @@ reader.readAsText(file);
                     document.getElementById('analyzeBtn').addEventListener('click', analyzeDocument);
                 });
             });
-            
-            // Analyze document function
-            // function analyzeDocument() {
-            //     // Show processing animation
-            //     uploadArea.innerHTML = `
-            //         <div class="text-center">
-            //             <div class="spinner-border text-primary mb-3" role="status">
-            //                 <span class="visually-hidden">Loading...</span>
-            //             </div>
-            //             <h4>Analyzing Document</h4>
-            //             <p class="text-muted">This may take a few moments...</p>
-            //         </div>
-            //     `;
-                
-            //     // Simulate processing time
-            //     setTimeout(() => {
-            //         uploadArea.innerHTML = `
-            //             <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
-            //             <h4>Analysis Complete</h4>
-            //             <p class="text-muted">Document processed successfully</p>
-            //             <button class="btn btn-outline-primary mt-2" id="analyzeBtn">Analyze Another</button>
-            //         `;
-                    
-            //         // Show results based on current document type
-            //         defaultResultText.classList.add('d-none');
-            //         simplifiedContent.classList.remove('d-none');
-                    
-            //         if (currentDocument && sampleDocuments[currentDocument]) {
-            //             simplifiedContent.innerHTML = `
-            //                 <div class="question-box">
-            //                     <h6>What is this document about?</h6>
-            //                     <p>${sampleDocuments[currentDocument].simplified.split('\n')[0]}</p>
-            //                 </div>
-            //                 <div class="answer-box">
-            //                     <h6>Key Points:</h6>
-            //                     <ul>
-            //                         ${sampleDocuments[currentDocument].simplified.split('\n').slice(1, 8).map(line => line.trim() ? `<li>${line.replace('- ', '')}</li>` : '').join('')}
-            //                     </ul>
-            //                 </div>
-            //                 <div class="question-box">
-            //                     <h6>Important Clauses:</h6>
-            //                     <ul>
-            //                         ${sampleDocuments[currentDocument].simplified.split('\n').slice(9).map(line => line.trim() ? `<li>${line.replace('- ', '')}</li>` : '').join('')}
-            //                     </ul>
-            //                 </div>
-            //             `;
-            //         } else {
-            //             // Generic result for custom uploads
-            //             simplifiedContent.innerHTML = `
-            //                 <div class="question-box">
-            //                     <h6>What is this document about?</h6>
-            //                     <p>This appears to be a legal document. Our AI has identified it as containing standard legal provisions.</p>
-            //                 </div>
-            //                 <div class="answer-box">
-            //                     <h6>Key Points:</h6>
-            //                     <ul>
-            //                         <li>The document establishes terms and conditions between parties</li>
-            //                         <li>It includes obligations and responsibilities of each party</li>
-            //                         <li>The document specifies duration and termination conditions</li>
-            //                         <li>Financial terms and payment details are included</li>
-            //                     </ul>
-            //                 </div>
-            //                 <div class="question-box">
-            //                     <h6>Important Clauses:</h6>
-            //                     <ul>
-            //                         <li>Termination conditions allow ending the agreement under specific circumstances</li>
-            //                         <li>Liability clauses limit responsibility in case of issues</li>
-            //                         <li>Governing law specifies which jurisdiction's laws apply</li>
-            //                         <li>Payment terms outline when and how payments should be made</li>
-            //                     </ul>
-            //                 </div>
-            //             `;
-            //         }
-                    
-            //         // Add event listener to the new analyze button
-            //         document.getElementById('analyzeBtn').addEventListener('click', () => {
-            //             location.reload();
-            //         });
-            //     }, 3000);
-            // }
-//             function analyzeDocument() {
-//     // Show loading spinner
-//     uploadArea.innerHTML = `
-//         <div class="text-center">
-//             <div class="spinner-border text-primary mb-3" role="status">
-//                 <span class="visually-hidden">Loading...</span>
-//             </div>
-//             <h4>Analyzing Document</h4>
-//             <p class="text-muted">Using Gemini AI...</p>
-//         </div>
-//     `;
-
-//     fetch('/analyze', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ text: previewContent.textContent })
-//     })
-//     .then(res => res.json())
-//     .then(data => {
-//         defaultResultText.classList.add('d-none');
-//         simplifiedContent.classList.remove('d-none');
-//         console.log("Backend response:", data);
-//         if (data && data.gemini) {
-//             simplifiedContent.innerHTML = `
-//                 <div class="answer-box">
-//                     <h6>Gemini AI Summary:</h6>
-//                     <p>${data.gemini}</p>
-//                 </div>
-//             `;
-//         } else {
-//             simplifiedContent.innerHTML = `
-//                 <div class="alert alert-danger">
-//                     <strong>Error:</strong> Gemini API did not return a summary.<br>
-//                     ${data.error ? data.error : "Please check backend response."}
-//                 </div>
-//             `;
-//         }
-//     })
-//     .catch(err => {
-//         console.error("Error analyzing document:", err);
-//         simplifiedContent.innerHTML = `
-//             <div class="alert alert-danger">
-//                 <strong>Request Failed:</strong> ${err.message}
-//             </div>
-//         `;
-//     });
-// }
-            
+      
             // Question answering functionality
             const askBtn = document.getElementById('askBtn');
             const questionInput = document.getElementById('questionInput');
@@ -1387,36 +1260,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="accordion" id="summariesAccordion">
     `;
     
-    // if (summaries.pegasus) {
-    //     summariesHTML += `
-    //         <div class="accordion-item">
-    //             <h2 class="accordion-header">
-    //                 <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#pegasusSummary">
-    //                     Pegasus Summary
-    //                 </button>
-    //             </h2>
-    //             <div id="pegasusSummary" class="accordion-collapse collapse show">
-    //                 <div class="accordion-body">${summaries.pegasus}</div>
-    //             </div>
-    //         </div>
-    //     `;
-    // }
-    
-    // if (summaries.bart) {
-    //     summariesHTML += `
-    //         <div class="accordion-item">
-    //             <h2 class="accordion-header">
-    //                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#bartSummary">
-    //                     BART Summary
-    //                 </button>
-    //             </h2>
-    //             <div id="bartSummary" class="accordion-collapse collapse">
-    //                 <div class="accordion-body">${summaries.bart}</div>
-    //             </div>
-    //         </div>
-    //     `;
-    // }
-    
     if (summaries.gemini_easy) {
         summariesHTML += `
             <div class="accordion-item">
@@ -1498,37 +1341,7 @@ function displayAnalysisResults(data) {
             <h6>AI Summaries:</h6>
             <div class="accordion" id="summariesAccordion">
     `;
-    
-    // if (data.summaries.pegasus) {
-    //     summariesHTML += `
-    //         <div class="accordion-item">
-    //             <h2 class="accordion-header">
-    //                 <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#pegasusSummary">
-    //                     Pegasus Summary
-    //                 </button>
-    //             </h2>
-    //             <div id="pegasusSummary" class="accordion-collapse collapse show">
-    //                 <div class="accordion-body">${data.summaries.pegasus}</div>
-    //             </div>
-    //         </div>
-    //     `;
-    // }
-    
-    // if (data.summaries.bart) {
-    //     summariesHTML += `
-    //         <div class="accordion-item">
-    //             <h2 class="accordion-header">
-    //                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#bartSummary">
-    //                     BART Summary
-    //                 </button>
-    //             </h2>
-    //             <div id="bartSummary" class="accordion-collapse collapse">
-    //                 <div class="accordion-body">${data.summaries.bart}</div>
-    //             </div>
-    //         </div>
-    //     `;
-    // }
-    
+
     if (data.summaries.gemini_easy) {
         summariesHTML += `
             <div class="accordion-item">
@@ -1579,62 +1392,6 @@ function displayAnalysisResults(data) {
     simplifiedContent.innerHTML = metricsHTML + summariesHTML;
 }
 
-// Update your analyzeDocument function to use the backend
-// function analyzeDocument() {
-//     const text = document.getElementById('previewContent').textContent;
-    
-//     if (!text) {
-//         alert('Please upload a document or select a sample first');
-//         return;
-//     }
-    
-//     // Show processing animation
-//     const uploadArea = document.getElementById('uploadArea');
-//     uploadArea.innerHTML = `
-//         <div class="text-center">
-//             <div class="spinner-border text-primary mb-3" role="status">
-//                 <span class="visually-hidden">Loading...</span>
-//             </div>
-//             <h4>Analyzing Document</h4>
-//             <p class="text-muted">This may take a few moments...</p>
-//         </div>
-//     `;
-    
-//     // Send request to backend
-//     fetch('/analyze', {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify({ text: text })
-//     })
-//     .then(response => response.json())
-//     .then(data => {
-//         if (data.success) {
-//             uploadArea.innerHTML = `
-//                 <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
-//                 <h4>Analysis Complete</h4>
-//                 <p class="text-muted">Document processed successfully</p>
-//                 <button class="btn btn-outline-primary mt-2" id="analyzeBtn">Analyze Another</button>
-//             `;
-            
-//             // Display results
-//             displayAnalysisResults(data);
-            
-//             // Add event listener to the new analyze button
-//             document.getElementById('analyzeBtn').addEventListener('click', () => {
-//                 location.reload();
-//             });
-//         } else {
-//             alert('Error: ' + data.error);
-//             location.reload();
-//         }
-//     })
-//     .catch(error => {
-//         alert('Error: ' + error);
-//         location.reload();
-//     });
-// }
 function analyzeDocument() {
     fetch('http://127.0.0.1:5000/analyze', {   // use full URL
         method: 'POST',
