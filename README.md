@@ -58,7 +58,7 @@ There is a pressing need for a solution that makes legal documents transparent, 
 1. YouTube: []()
 2. Web Demo: []()
 
-# Team: Insight Strikers
+# Team: Coding Masters
 1. Sujal Bhagat: [https://www.linkedin.com/in/sujal-bhagat/](https://www.linkedin.com/in/sujal-bhagat/)
 2. Nency Rana: [https://www.linkedin.com/in/nency-rana-a22454376/](https://www.linkedin.com/in/nency-rana-a22454376/)
 3. Nishchal Kansara: [https://www.linkedin.com/in/nishchal-kansara/](https://www.linkedin.com/in/nishchal-kansara/)
