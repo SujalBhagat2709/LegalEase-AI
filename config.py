@@ -21,7 +21,7 @@ MODEL_FOLDER = os.path.join(BASE_DIR, 'models', 'trained_models')
 # AI model configuration
 PEGASUS_MODEL_NAME = "google/pegasus-xsum"
 BART_MODEL_NAME = "facebook/bart-large-cnn"
-GEMINI_API_KEY = "AIzaSyAk7fp-zNnZ1kfmCy1km9NhcsGXgwobKco"
+GOOGLE_API_KEY= "AIzaSyDt8Nn_3tLPSxEZFyOJKlqpyM03IE2ITKw"
 
 # Visualization configuration
 WORDCLOUD_WIDTH = 800
