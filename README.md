@@ -55,7 +55,7 @@ There is a pressing need for a solution that makes legal documents transparent, 
 2. CI/CD with GitHub Actions / Cloud Build
 
 # Project Demonstration:
-1. YouTube: []()
+1. YouTube: [https://youtu.be/ItZiuUjJbJU?si=Fnr-VKfFjbBIdwUu](https://youtu.be/ItZiuUjJbJU?si=Fnr-VKfFjbBIdwUu)
 2. Web Demo: []()
 
 # Team: Coding Masters
