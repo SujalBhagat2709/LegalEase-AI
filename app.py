@@ -1,6 +1,7 @@
 # Import necessary libraries
-
+import sys
 import os
+from pathlib import Path
 import re
 import nltk
 import torch
@@ -21,6 +22,8 @@ import google.generativeai as genai
 
 # Initialize Flask app and load environment variables
 load_dotenv()
+
+UPLOAD_FOLDER = '/opt/render/project/src/uploads' if 'RENDER' in os.environ else 'uploads'
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max file size

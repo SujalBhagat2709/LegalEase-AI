@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: legalease-ai
+    env: python
+    region: ohio  # or singapore, oregon, frankfurt, etc.
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: GOOGLE_API_KEY
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: uploads
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 1
