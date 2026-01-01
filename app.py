@@ -1,7 +1,6 @@
 # Import necessary libraries
-import sys
+
 import os
-from pathlib import Path
 import re
 import nltk
 import torch
@@ -22,8 +21,6 @@ import google.generativeai as genai
 
 # Initialize Flask app and load environment variables
 load_dotenv()
-
-UPLOAD_FOLDER = '/opt/render/project/src/uploads' if 'RENDER' in os.environ else 'uploads'
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max file size
@@ -520,13 +517,12 @@ def server_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
 # Run the Flask app
+# ============================================================
+# RENDER DEPLOYMENT SETTINGS
+# ============================================================
 if __name__ == '__main__':
-    print("=" * 60)
-    print("LegalEaseAI – Complete Legal Analysis System")
-    print("=" * 60)
-    print(f"Server starting on: http://localhost:5000")
-    print(f"API Key configured: {bool(GOOGLE_API_KEY)}")
-    print(f"Models loaded: {sentence_model is not None}")
-    print("=" * 60)
+    # Get port from environment variable (Render provides this)
+    port = int(os.environ.get('PORT', 5000))
     
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    # Use 0.0.0.0 to make server publicly accessible
+    app.run(debug=False, host='0.0.0.0', port=port)
