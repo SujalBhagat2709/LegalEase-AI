@@ -517,12 +517,13 @@ def server_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
 # Run the Flask app
-# ============================================================
-# RENDER DEPLOYMENT SETTINGS
-# ============================================================
 if __name__ == '__main__':
-    # Get port from environment variable (Render provides this)
-    port = int(os.environ.get('PORT', 5000))
+    print("=" * 60)
+    print("LegalEaseAI – Complete Legal Analysis System")
+    print("=" * 60)
+    print(f"Server starting on: http://localhost:5000")
+    print(f"API Key configured: {bool(GOOGLE_API_KEY)}")
+    print(f"Models loaded: {sentence_model is not None}")
+    print("=" * 60)
     
-    # Use 0.0.0.0 to make server publicly accessible
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True, port=5000, host='0.0.0.0')
