@@ -1,12 +1,12 @@
-setuptools>=65.5.0
-wheel
-gunicorn
-flask==2.3.3
-pandas==2.2.2
-transformers==4.41.2
-torch==2.2.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-google-generativeai==0.3.2
-PyPDF2==3.0.1
-python-docx==1.1.0
-matplotlib==3.9.0
-wordcloud==1.9.3
+Flask
+python-dotenv
+nltk
+torch
+pdfplumber
+numpy
+langdetect
+sentence-transformers
+scikit-learn
+transformers
+google-generativeai
+Pillow

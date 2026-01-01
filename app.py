@@ -1,242 +1,529 @@
+# Import necessary libraries
+
 import os
-from flask import Flask, render_template, request, jsonify, send_file
-from dotenv import load_dotenv
-import google.generativeai as genai
-import PyPDF2
-from docx import Document
-from utils.data_processing import process_legal_document
-from utils.visualization import create_complexity_radar, generate_wordcloud
-import pandas as pd
+import re
+import nltk
+import torch
+import pdfplumber
 import json
-from utils.model_integration import initialize_models, summarize_with_gemini
+import numpy as np
+from flask import Flask, request, jsonify, render_template, send_file
+from dotenv import load_dotenv
+from langdetect import detect, LangDetectException
+from werkzeug.utils import secure_filename
 
+from nltk.tokenize import sent_tokenize
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-models = initialize_models()
-gemini_client = models["gemini"]
+import google.generativeai as genai
 
-
-# Load environment variables
+# Initialize Flask app and load environment variables
 load_dotenv()
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max file size
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'txt'}
 
-# Configure Gemini AI
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Create uploads directory if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+else:
+    print("WARNING: GOOGLE_API_KEY not found in .env file")
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Using device: {device}")
+
+# NLTK resource download
+def download_nltk_resources():
+    try:
+        nltk.data.find("tokenizers/punkt")
+    except LookupError:
+        nltk.download("punkt")
+
+    try:
+        nltk.data.find("tokenizers/punkt_tab")
+    except LookupError:
+        nltk.download("punkt_tab")
+
+download_nltk_resources()
+
+# Load models
+print("Loading models...")
+try:
+    sentence_model = SentenceTransformer(
+        "sentence-transformers/all-MiniLM-L6-v2"
+    )
+    tokenizer = AutoTokenizer.from_pretrained(
+        "google/flan-t5-large"
+    )
+    model = AutoModelForSeq2SeqLM.from_pretrained(
+        "google/flan-t5-large"
+    ).to(device)
+    print("Models loaded successfully!")
+except Exception as e:
+    print(f"Error loading models: {e}")
+    sentence_model = None
+    tokenizer = None
+    model = None
+
+# Helper functions
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def safe_detect_language(text):
+    try:
+        clean = re.sub(r"[^A-Za-z ]", " ", text)
+        if len(clean.split()) < 10:
+            return "en"
+        return detect(clean)
+    except LangDetectException:
+        return "en"
 
 def extract_text_from_pdf(pdf_path):
-    pdf_reader = PyPDF2.PdfReader(pdf_path)
+    """Robust PDF text extraction (as requested)"""
     text = ""
-    for page in pdf_reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text + "\n"
-    return text
-
-def extract_text_from_docx(file):
-    doc = Document(file)
-    text = ""
-    for para in doc.paragraphs:
-        text += para.text + "\n"
-    return text
-
-def extract_text_from_txt(txt_path):
     try:
-        with open(txt_path, 'r', encoding='utf-8') as file:
-            return file.read().strip()
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+
+        if text.strip():
+            return text.strip()
+
     except Exception as e:
-        print(f"Error extracting text from TXT: {e}")
+        print(f"Direct text extraction failed: {e}")
+
+    return text.strip()
+
+def extract_text_from_txt(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            return f.read().strip()
+    except Exception as e:
+        print(f"TXT extraction failed: {e}")
         return ""
 
-# Load abbreviation dictionary
-try:
-    abbreviation_df = pd.read_csv('Abbreviation_dict.csv')
-    abbreviation_dict = dict(zip(abbreviation_df['Abbreviation'], abbreviation_df['Full Form']))
-except:
-    abbreviation_dict = {}
-
-@app.route("/analyze", methods=["POST"])
-def analyze():
+# Load constitution text
+def load_constitution():
     try:
-        data = request.get_json()
-        text = data.get("text", "")
-
-        if not text.strip():
-            return jsonify({"error": "No text provided"}), 400
-
-        # 🎯 Custom Prompt for Better Summary
-        prompt = f"""
-        You are an expert legal assistant AI. Your job is to answer user questions about legal documents in a **clear, beginner-friendly way**, without generating unnecessary long summaries.
-
-Instructions:
-1. Only answer based on the provided document.
-2. Reference relevant sections if necessary.
-3. Structure your answer depending on the query:
-   - Summary → Key Points → Important Clauses → Explanation
-4. Be concise, simple, and practical for someone with no legal knowledge.
-
-
-        Document:
-        {text}
-        """
-
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(prompt)
-
-        summary = response.text if response and response.text else "Gemini returned empty response"
-        return jsonify({"gemini": summary})
-
+        text = ""
+        # Check for constitution.pdf in current directory
+        constitution_path = "constitution.pdf"
+        if not os.path.exists(constitution_path):
+            print("WARNING: constitution.pdf not found in current directory")
+            return ""
+            
+        with pdfplumber.open(constitution_path) as pdf:
+            for page in pdf.pages:
+                t = page.extract_text()
+                if t:
+                    text += t + "\n"
+        return text
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
-@app.route("/summarize", methods=["POST"])
-def summarize():
-    text = request.json.get("text")
-    summary = summarize_with_gemini(text)
-    return jsonify({"summary": summary})
+        print(f"Error loading constitution: {e}")
+        return ""
 
+def extract_articles(text):
+    articles = {}
+    parts = re.split(r"Article\s+(\d+[A-Z]?)", text)
+
+    for i in range(1, len(parts), 2):
+        art = f"Article {parts[i]}"
+        explanation = re.sub(r"\s+", " ", parts[i + 1]).strip()[:600]
+        articles[art] = explanation
+
+    return articles
+
+# Extractive Summary
+def extractive_summary(text, top_k=8):
+    sentences = sent_tokenize(text)
+    if len(sentences) <= top_k:
+        return text
+
+    doc_emb = sentence_model.encode([text])[0]
+    sent_embs = sentence_model.encode(sentences)
+    sims = cosine_similarity([doc_emb], sent_embs)[0]
+
+    ranked = sorted(
+        enumerate(zip(sentences, sims)),
+        key=lambda x: x[1][1],
+        reverse=True
+    )
+
+    selected_idx = sorted([i for i, _ in ranked[:top_k]])
+    return " ".join([sentences[i] for i in selected_idx])
+
+# Abstractive Summary
+def grounded_text(text, top_k=40):
+    sentences = sent_tokenize(text)
+    doc_emb = sentence_model.encode([text])[0]
+    sent_embs = sentence_model.encode(sentences)
+    sims = cosine_similarity([doc_emb], sent_embs)[0]
+
+    ranked = sorted(
+        enumerate(zip(sentences, sims)),
+        key=lambda x: x[1][1],
+        reverse=True
+    )
+
+    selected_idx = sorted([i for i, _ in ranked[:top_k]])
+    return " ".join([sentences[i] for i in selected_idx])
+
+def abstractive_summary(text):
+    g_text = grounded_text(text)
+
+    prompt = f"""
+Summarize the following Indian legal judgment.
+
+Rules:
+- Preserve legal meaning
+- Do not add facts
+- Use formal legal language
+- Mention issue, reasoning, and final decision
+
+Judgment:
+{g_text}
+"""
+
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        max_length=2048,
+        truncation=True
+    ).to(device)
+
+    output = model.generate(
+        **inputs,
+        max_length=250,
+        min_length=120,
+        num_beams=4,
+        length_penalty=1.2,
+        no_repeat_ngram_size=3
+    )
+
+    return tokenizer.decode(output[0], skip_special_tokens=True)
+
+# Constitution Mapping
+def map_constitution(summary, articles):
+    matches = []
+    sw = set(summary.lower().split())
+
+    for art, expl in articles.items():
+        aw = set(expl.lower().split())
+        if len(sw & aw) > 12:
+            matches.append({
+                "article": art,
+                "explanation": expl
+            })
+    return matches
+
+# Case Win Prediction
+def predict_case_win(text, matched_articles):
+    score = 50
+    reasons = []
+
+    if "penalty" in text.lower():
+        score -= 10
+        reasons.append("Penalty clauses detected")
+
+    if "liable" in text.lower():
+        score -= 10
+        reasons.append("High liability wording")
+
+    if matched_articles:
+        score += 15
+        reasons.append("Constitutional alignment present")
+
+    score = max(5, min(score, 95))
+
+    outcome = (
+        "High chance of success" if score >= 70
+        else "Moderate chance of success" if score >= 50
+        else "Low chance of success"
+    )
+
+    return score, outcome, reasons
+
+# Gemini Q&A
+def gemini_answer(question, context):
+    if not GOOGLE_API_KEY:
+        return "Google API key not configured. Please set GOOGLE_API_KEY in .env file."
+    
+    try:
+        # Try gemini-2.0-flash-exp first, fall back to gemini-pro
+        try:
+            genai_model = genai.GenerativeModel("gemini-2.5-flash")
+        except:
+            genai_model = genai.GenerativeModel("gemini-2.5-pro")
+        
+        prompt = f"""
+You are a legal assistant AI.
+Answer only from the given context.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+
+        response = genai_model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Gemini API error: {e}")
+        return f"AI analysis is currently unavailable. Error: {str(e)}"
+
+# Evaluation Metrics
+def evaluation_metrics(document, summary):
+    doc_emb = sentence_model.encode([document])[0]
+    sum_emb = sentence_model.encode([summary])[0]
+
+    cosine_sim = cosine_similarity(
+        [doc_emb], [sum_emb]
+    )[0][0]
+
+    compression_ratio = len(summary.split()) / max(
+        1, len(document.split())
+    )
+
+    return {
+        "Semantic Similarity": round(float(cosine_sim), 3),
+        "Compression Ratio": round(float(compression_ratio), 3),
+        "Document Length": len(document.split()),
+        "Summary Length": len(summary.split())
+    }
+
+# Complete Legal Analysis
+def complete_legal_analysis(doc_text, mode="Extractive"):
+    """Performs complete legal analysis as in Streamlit"""
+    
+    # Load constitution
+    constitution_text = load_constitution()
+    articles = extract_articles(constitution_text)
+    
+    # Generate summary based on mode
+    if mode == "Extractive":
+        summary = extractive_summary(doc_text)
+    else:  # Abstractive
+        summary = abstractive_summary(doc_text)
+    
+    # Map to constitution
+    matched_articles = map_constitution(summary, articles)
+    
+    # Predict case win
+    win_score, win_result, win_reasons = predict_case_win(
+        doc_text, matched_articles
+    )
+    
+    # Calculate evaluation metrics
+    metrics = evaluation_metrics(doc_text, summary)
+    
+    return {
+        "summary": summary,
+        "matched_articles": matched_articles,
+        "win_prediction": {
+            "score": win_score,
+            "result": win_result,
+            "reasons": win_reasons
+        },
+        "evaluation_metrics": metrics,
+        "mode": mode
+    }
+
+# Flask Routes
 @app.route('/')
-def index():
+def home():
     return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    """Upload and process document (exact Streamlit logic)"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Extract text based on file type
+        if filename.endswith('.pdf'):
+            text = extract_text_from_pdf(filepath)
+        else:
+            text = extract_text_from_txt(filepath)
+        
+        # Clean up file
+        try:
+            os.remove(filepath)
+        except:
+            pass
+        
+        if len(text) < 200:
+            return jsonify({'error': 'Unable to extract sufficient text from document (minimum 200 characters required).'}), 400
+        
+        # Return basic document info
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'content': text,
+            'document_length': len(text.split())
+        })
+    
+    return jsonify({'error': 'Invalid file type. Please upload PDF or TXT.'}), 400
 
 @app.route('/analyze', methods=['POST'])
 def analyze_document():
-    # Check if file was uploaded
-    if 'file' in request.files:
-        file = request.files['file']
-        if file and file.filename != '':
-            # Save the file temporarily
-            file_path = os.path.join('uploads', file.filename)
-            file.save(file_path)
-            
-            # Extract text based on file type
-            if file.filename.endswith('.pdf'):
-                text = extract_text_from_pdf(file_path)
-            elif file.filename.endswith('.docx'):
-                text = extract_text_from_docx(file_path)
-            elif file.filename.endswith('.txt'):
-                text = extract_text_from_txt(file_path)
-            else:
-                return jsonify({'error': 'Unsupported file format'})
-            
-            # Clean up
-            os.remove(file_path)
-        else:
-            return jsonify({'error': 'No file provided'})
-    else:
-        # Get text from JSON request
-        data = request.get_json()
-        text = data.get('text', '')
+    """Complete legal analysis endpoint (exact Streamlit logic)"""
+    data = request.json
+    text = data.get('text', '')
+    mode = data.get('mode', 'Extractive')  # Extractive or Abstractive
     
     if not text:
-        return jsonify({'error': 'No text provided'})
+        return jsonify({'error': 'No text provided'}), 400
+    
+    if len(text.split()) < 50:
+        return jsonify({'error': 'Text too short for analysis (minimum 50 words required)'}), 400
     
     try:
-        # Process the document
-        processed_data = process_legal_document(text, abbreviation_dict)
+        # Perform complete legal analysis
+        analysis_results = complete_legal_analysis(text, mode)
         
-        # Generate summaries with Gemini
-        model = genai.GenerativeModel('gemini-pro')
+        # Also calculate readability metrics
+        sentences = sent_tokenize(text)
+        words = text.split()
+        avg_sentence_length = len(words) / max(len(sentences), 1)
         
-        summaries = {}
+        # Calculate complex word ratio
+        def count_syllables(word):
+            vowels = "aeiouy"
+            count = 0
+            word = word.lower()
+            if word.endswith('e'):
+                word = word[:-1]
+            if len(word) == 0:
+                return 0
+            prev_char = word[0]
+            for char in word[1:]:
+                if char in vowels and prev_char not in vowels:
+                    count += 1
+                prev_char = char
+            return max(1, count)
         
-        # Easy understanding summary
-        easy_prompt = f"Explain this legal document in simple language that a high school student can understand:\n\n{text[:3000]}"
-        easy_response = model.generate_content(easy_prompt)
-        summaries['easy'] = easy_response.text
+        complex_words = [word for word in words if count_syllables(word) >= 3]
+        complex_word_ratio = len(complex_words) / max(len(words), 1)
         
-        # Medium understanding summary
-        medium_prompt = f"Summarize this legal document for an educated adult:\n\n{text[:3000]}"
-        medium_response = model.generate_content(medium_prompt)
-        summaries['medium'] = medium_response.text
+        # Flesch reading ease
+        flesch_score = 206.835 - 1.015 * avg_sentence_length - 84.6 * complex_word_ratio
         
-        # Professional summary
-        pro_prompt = f"Provide a detailed professional analysis of this legal document:\n\n{text[:3000]}"
-        pro_response = model.generate_content(pro_prompt)
-        summaries['professional'] = pro_response.text
-        
-        # Generate visualizations
-        create_complexity_radar(processed_data['readability_stats'], 'user_document')
-        generate_word_cloud(processed_data['processed_text'], 'user_document')
-        
-        # Prepare response
-        response = {
-            'success': True,
-            'readability_metrics': processed_data['readability_stats'],
-            'summaries': summaries,
-            'visualizations': {
-                'radar_chart': 'data/visualizations/radar_user_document.png',
-                'word_cloud': 'data/visualizations/wordcloud_user_document.png'
-            }
+        readability_metrics = {
+            "num_sentences": len(sentences),
+            "num_words": len(words),
+            "avg_sentence_length": round(avg_sentence_length, 2),
+            "avg_word_length": sum(len(w) for w in words) / max(len(words), 1),
+            "complex_word_ratio": round(complex_word_ratio, 3),
+            "flesch_score": round(flesch_score, 2)
         }
-        
-        return jsonify(response)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)})
-
-@app.route('/sample/<doc_type>')
-def get_sample(doc_type):
-    samples = {
-        'rental': 'samples/rental_agreement.txt',
-        'loan': 'samples/loan_agreement.txt',
-        'terms': 'samples/terms_of_service.txt'
-    }
-    
-    if doc_type not in samples:
-        return jsonify({'error': 'Invalid sample type'})
-    
-    try:
-        with open(samples[doc_type], 'r', encoding='utf-8') as f:
-            content = f.read()
         
         return jsonify({
             'success': True,
-            'content': content,
-            'type': doc_type
+            'analysis': analysis_results,
+            'readability_metrics': readability_metrics,
+            'risk_analysis': {
+                'identified_risks': analysis_results['win_prediction']['reasons'],
+                'risk_count': len(analysis_results['win_prediction']['reasons'])
+            }
         })
+        
     except Exception as e:
-        return jsonify({'error': f'Error loading sample: {str(e)}'})
+        print(f"Analysis error: {e}")
+        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
+    """Gemini Q&A endpoint (exact Streamlit logic)"""
     data = request.json
-    document_text = data.get('text', '')
     question = data.get('question', '')
+    context = data.get('context', '')
     
-    if not document_text or not question:
-        return jsonify({'error': 'Document text and question are required'})
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+    
+    if not context:
+        return jsonify({'error': 'No document context provided'}), 400
     
     try:
-        model = genai.GenerativeModel('gemini-pro')
-        prompt = f"Based on this legal document: {document_text[:3000]}\n\nAnswer this question: {question}"
-        response = model.generate_content(prompt)
-        
+        answer = gemini_answer(question, context)
         return jsonify({
             'success': True,
-            'answer': response.text
+            'question': question,
+            'answer': answer
         })
     except Exception as e:
-        return jsonify({'error': str(e)})
+        print(f"Q&A error: {e}")
+        return jsonify({'error': f'Failed to get answer: {str(e)}'}), 500
 
-@app.route('/download_report', methods=['POST'])
-def download_report():
-    data = request.json
-    analysis = data.get('analysis', '')
-    
-    # Create a simple text report
-    report_content = f"LegalEase AI Analysis Report\n\n{analysis}"
-    
-    # Save to a temporary file
-    report_path = os.path.join('reports', 'legal_analysis_report.txt')
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write(report_content)
-    
-    return send_file(report_path, as_attachment=True)
+@app.route('/constitution', methods=['GET'])
+def get_constitution_articles():
+    """Get constitution articles for mapping"""
+    try:
+        constitution_text = load_constitution()
+        if not constitution_text:
+            return jsonify({'error': 'Constitution file not found'}), 404
+        
+        articles = extract_articles(constitution_text)
+        return jsonify({
+            'success': True,
+            'articles': articles,
+            'total_articles': len(articles)
+        })
+    except Exception as e:
+        print(f"Constitution error: {e}")
+        return jsonify({'error': f'Failed to load constitution: {str(e)}'}), 500
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'models_loaded': sentence_model is not None,
+        'gemini_configured': GOOGLE_API_KEY is not None,
+        'device': device
+    })
+
+# Error Handlers
+@app.errorhandler(413)
+def too_large(e):
+    return jsonify({'error': 'File too large. Maximum size is 10MB.'}), 413
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Resource not found'}), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({'error': 'Internal server error'}), 500
+
+# Run the Flask app
 if __name__ == '__main__':
-    # Create necessary directories
-    for folder in ['uploads', 'data/raw', 'data/processed', 'data/visualizations', 'reports']:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
+    print("=" * 60)
+    print("LegalEaseAI – Complete Legal Analysis System")
+    print("=" * 60)
+    print(f"Server starting on: http://localhost:5000")
+    print(f"API Key configured: {bool(GOOGLE_API_KEY)}")
+    print(f"Models loaded: {sentence_model is not None}")
+    print("=" * 60)
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, port=5000, host='0.0.0.0')
