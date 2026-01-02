@@ -1,4 +1,5 @@
 Flask
+streamlit
 python-dotenv
 nltk
 torch
@@ -10,3 +11,5 @@ scikit-learn
 transformers
 google-generativeai
 Pillow
+pytesseract 
+pdf2image 
