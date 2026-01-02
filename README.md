@@ -1,62 +1,42 @@
-# LegalEase AI – Generative AI for Demystifying Legal Documents
+# LegalEase AI – AI for Demystifying Legal Documents
 
-LegalEase AI is a prototype built for the Gen AI Exchange Hackathon (Hack2Skills). Our mission is to turn complex legal text into plain-language summaries, clause explanations, and trustworthy answers.
-<br>The tool empowers renters, loan applicants, small business owners, gig workers, and everyday consumers to confidently understand legal documents - without costly lawyer consultations.
+# Objective
+The main goal of LegalEase AI is to simplify complex legal documents using artificial intelligence. Our platform transforms difficult legal language into simple, easy-to-understand summaries that anyone can understand. We help users make informed decisions about legal agreements without needing a law degree.
 
-<b>How it works:</b>
-1. Upload a contract or legal case document.
-2. The system parses the text, extracts clauses, and generates multi-level summaries (easy, medium, professional).
-3. Users can ask questions and receive clause-cited answers with risks flagged.
-4. Visual dashboards highlight readability, complexity, and legal red flags.
+# Purpose
+LegalEase AI exists to bridge the gap between legal professionals and everyday people. Many individuals sign contracts, rental agreements, loan documents, and terms of service without fully understanding what they are agreeing to. Our tool empowers users by breaking down legal jargon into plain language, helping them identify risks and understand their rights and responsibilities.
 
 # Problem Statement
+Legal documents are filled with complex language and technical terms that are difficult for the average person to understand. This creates an information gap where people may unknowingly agree to unfavorable terms, exposing themselves to financial and legal risks. Most people cannot afford to hire lawyers to review every document they encounter, leaving them vulnerable to hidden clauses and unfair conditions.
 
-Legal documents like rental agreements, loan contracts, and terms of service are often filled with jargon that’s nearly impossible for non - experts to understand.
-<br>This leads to information asymmetry, where individuals unknowingly agree to unfavorable terms - exposing themselves to legal and financial risks.
+# Our Solution
+LegalEase AI provides a free, accessible tool that uses Google Cloud's Gemini AI to analyze legal documents. Our solution offers:
 
-There is a pressing need for a solution that makes legal documents transparent, simple, and safe for everyone.
+- Document summarization in simple language
+- Interactive question and answer about specific clauses
+- Risk identification and highlighting
+- Constitutional mapping for Indian legal documents
+- Case outcome prediction based on document analysis
 
-# Our AI-Powered Solution
-<b>LegalEase AI is designed as a hybrid generative AI system with:</b>
-1. Multi-level Summaries: Tailored for students (10th grade), educated professionals, and lawyers.
-2. Clause Extraction & Risk Highlighting: Clickable clauses with plain-language explanation + risk tags.
-3. Interactive Q&A: Users ask questions → AI provides cited answers linked to the original text.
-4. Readability & Complexity Dashboard: Flesch scores, radar charts, and wordclouds for quick insights.
-5. Export Options: Simplified PDF, redline changes, risk checklist, CSV export of clauses.
-6. Privacy & Security: PII masking and local redaction before processing.
-7. Safety-first AI: “I don’t know” responses and flagged ambiguous items routed to a human legal reviewer.
-
-<b>Unique Selling Points (USP):</b>
-1. Accuracy + Simplicity → Demystifies without changing legal meaning.
-2. Multi-tier outputs → From plain English for citizens to professional detail for lawyers.
-3. Ensemble AI → Vertex AI (Gemini) as primary + HuggingFace Pegasus/BART fallback for robustness.
-4. Trust & Safety → Confidence scores, source citations, and human-in-loop for edge cases.
+Users can upload any legal document and receive clear explanations in minutes, helping them understand what they are signing and making better decisions.
 
 # Technologies Used
-<b>Frontend & Backend</b>
-1. React / Flask + Bootstrap frontend
-2. Flask REST API endpoints (/analyze, /ask)
-3. Hosting: Cloud Run / App Engine
+- Backend Framework: Python with Flask, Streamlit
+- AI Models: Google Gemini AI, Hugging Face Transformers
+- Text Processing: NLTK, Sentence Transformers
+- PDF Processing: PDFPlumber
+- Frontend: HTML, CSS, JavaScript, Bootstrap
+- Machine Learning: PyTorch, Scikit-learn
 
-<b>AI & Data</b>
-1. Generative AI: Gemini (Vertex AI) for clause simplification + Q&A
-2. Summarization Ensemble: Pegasus (google/pegasus-xsum) & BART (facebook/bart-large-cnn)
-3. Hugging Face Transformers (PyTorch / TensorFlow)
-4. NLP preprocessing: PyPDF2, python-docx, NLTK, spaCy
+# How to Use
+1. Upload your legal document (PDF or text format)
+2. Choose between extractive or abstractive summarization
+3. Review the simplified document summary
+4. Ask questions about specific clauses
+5. Check risk analysis and constitutional mapping
+6. Get predictions about potential case outcomes
 
-<b>Infrastructure & Tools</b>
-1. Cloud Storage for uploads & assets
-2. Firestore/Postgres for metadata
-3. Firebase Auth / OAuth for secure login
-4. Matplotlib, Plotly, WordCloud for visual dashboards
-
-<b>Security & DevOps</b>
-1. TLS encryption, IAM roles, and Cloud Logging/Monitoring
-2. CI/CD with GitHub Actions / Cloud Build
-
-# Project Demonstration:
-1. YouTube: [https://youtu.be/ItZiuUjJbJU?si=Fnr-VKfFjbBIdwUu](https://youtu.be/ItZiuUjJbJU?si=Fnr-VKfFjbBIdwUu)
-2. Web Demo: []()
+# Demonstration
 
 # Team: Coding Masters
 1. Sujal Bhagat: [https://www.linkedin.com/in/sujal-bhagat/](https://www.linkedin.com/in/sujal-bhagat/)
